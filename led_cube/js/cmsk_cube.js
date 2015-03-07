@@ -371,6 +371,8 @@ var CMSK = function () {
         }
     }
 
+    var tan = Math.tan;
+
     function AnimationBoxShrinkGrow(rot, flip) {
         var i=0, xyz;
 
@@ -848,13 +850,130 @@ var CMSK = function () {
         }
     }
 
+    function AnimationFireworks() {
+        var n = 50, delay = 100;
+
+        var f = 0, e = 0;
+
+        var origin_x = 3;
+        var origin_y = 3;
+        var origin_z = 3;
+
+        var rand_y, rand_x, rand_z;
+
+        var slowrate, gravity;
+
+        // Particles and their position, x,y,z and their movement, dx, dy, dz
+        var particles;
+
+        var ip = 0;
+        var instructions = [
+            function () {
+                fill(0x00);
+
+                particles = [];
+
+                for (var i = 0; i < n; i++) {
+                    particles.push([]);
+                }
+
+                origin_x = rand()%4;
+                origin_y = rand()%2;
+                origin_z = rand()%4;
+                origin_z +=2;
+                origin_x +=2;
+                origin_y +=5;
+
+                ip++;
+                return 0;
+            },
+            function () {
+                // shoot a particle up in the air
+                if (e<origin_y) {
+                    if (e > 0) {
+                        fill(0x00);
+                    }
+
+                    setvoxel(origin_x, e, origin_z);
+
+                    return (10+50*e++);
+                } else {
+                    fill(0x00);
+                    e = 0;
+                    ip++;
+                    return 0;
+                }
+            },
+            function () {
+                // Fill particle array
+                for (f=0; f<n; f++) {
+                    // Position
+                    particles[f].push(origin_x);
+                    particles[f].push(origin_y);
+                    particles[f].push(origin_z);
+
+                    rand_x = rand()%200;
+                    rand_y = rand()%200;
+                    rand_z = rand()%200;
+
+                    // Movement
+                    particles[f].push(1-rand_x/100); // dx
+                    particles[f].push(1-rand_y/100); // dy
+                    particles[f].push(1-rand_z/100); // dz
+                }
+
+                ip++;
+                return 0;
+            },
+            function () {
+                // explode
+                if (e<25) {
+                    if (e > 0) {
+                        fill(0x00);
+                    }
+
+                    slowrate = 1+tan((e+0.1)/20)*10;
+                    gravity = tan((e+0.1)/20)/2;
+
+                    for (f=0; f<n; f++) {
+                        particles[f][0] += particles[f][3]/slowrate;
+                        particles[f][1] += particles[f][4]/slowrate;
+                        particles[f][2] += particles[f][5]/slowrate;
+                        particles[f][1] -= gravity;
+
+                        setvoxel(Math.round(particles[f][0]),
+                                 Math.round(particles[f][1]),
+                                 Math.round(particles[f][2]));
+                    }
+
+                    e++;
+                    return delay;
+                } else {
+                    fill(0x00);
+                    e = 0;
+                    ip = 0;
+                    return 1000;
+                }
+            }
+        ];
+
+        return function() {
+            if (ip >= instructions.length) {
+                ip = 0;
+            }
+
+            return instructions[ip]();
+        };
+    }
+
     return {
-        'PlaneBoing': AnimationPlaneBoing,
-        'Blinky': AnimationBlinky,
-        'BoxShrinkGrow': AnimationBoxShrinkGrow2,
-        'BoxWoopWoop': AnimationBoxWoopWoop,
-        'BoingBoing': AnimationBoingBoing,
-        'RandomFiller': AnimationRandomFiller,
-        'Rain': AnimationRain
+          'PlaneBoing':    AnimationPlaneBoing
+        , 'Blinky':        AnimationBlinky
+        , 'BoxShrinkGrow': AnimationBoxShrinkGrow2
+        , 'BoxWoopWoop':   AnimationBoxWoopWoop
+        , 'BoingBoing':    AnimationBoingBoing
+        , 'RandomFiller':  AnimationRandomFiller
+        , 'Rain':          AnimationRain
+        , 'Fireworks':     AnimationFireworks
     }
 }();
