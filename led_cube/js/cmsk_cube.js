@@ -170,7 +170,7 @@ var CMSK = function () {
 
     function AnimationPlaneBoing() {
         var i = 0, j = CUBE_SIZE-1;
-        var delay = 2;
+        var delay = 30;
         var plane = [AXIS_X, AXIS_Y, AXIS_Z][rand()%3];
 
         return function () {
@@ -966,6 +966,57 @@ var CMSK = function () {
         };
     }
 
+    function distance2d(x1, y1, x2, y2) {
+        return Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+    }
+
+    function AnimationRipples() {
+        var ripple_interval = 1.3;
+        var i = 0;
+        var delay = 5;
+
+        return function () {
+            fill(0x00);
+
+            for (var x=0; x<8; x++) {
+                for (var z=0; z<8; z++) {
+                    var distance = distance2d(3.5,3.5,x,z)/9.899495*8;
+                    var height = 4+Math.sin(distance/ripple_interval + i/50)*4;
+
+                    setvoxel(x, Math.floor(height), z);
+                }
+            }
+
+            i++;
+            return delay;
+        };
+    }
+
+    function AnimationSidewaves() {
+        var origin_x, origin_y, distance, height, ripple_interval = 2;
+        var i = 0;
+        var delay = 5;
+
+        return function () {
+            fill(0x00);
+
+            origin_x = 3.5+Math.sin(i/500)*4;
+            origin_y = 3.5+Math.cos(i/500)*4;
+
+            for (x=0;x<8;x++) {
+                for (y=0;y<8;y++) {
+                    distance = distance2d(origin_x,origin_y,x,y)/9.899495*8;
+                    height = Math.floor(4+Math.sin(distance/ripple_interval + i/50)*3.6);
+
+                    setvoxel(x, height, y);
+                }
+            }
+
+            i++;
+            return delay;
+        };
+    }
+
     return {
           'PlaneBoing':    AnimationPlaneBoing
         , 'Blinky':        AnimationBlinky
@@ -975,5 +1026,7 @@ var CMSK = function () {
         , 'RandomFiller':  AnimationRandomFiller
         , 'Rain':          AnimationRain
         , 'Fireworks':     AnimationFireworks
+        , 'Ripples':       AnimationRipples
+        , 'Sidewaves':     AnimationSidewaves
     }
 }();

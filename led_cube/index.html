@@ -68,6 +68,8 @@ var animationList = {
     , 'CMSK Box Shrink-Grow': 'CMSK.BoxShrinkGrow'
     , 'CMSK Boing-Boing':     'CMSK.BoingBoing'
     , 'CMSK Fireworks':       'CMSK.Fireworks'
+    , 'CMSK Ripples':         'CMSK.Ripples'
+    , 'CMSK Sidewaves':       'CMSK.Sidewaves'
     , 'Darrah SineWave':      'Darrah.SineWave'
     , 'Darrah Rain':          'Darrah.Rain'
     , 'Darrah Folder':        'Darrah.Folder'
@@ -76,11 +78,11 @@ var animationList = {
     , 'Darrah ColorWheel':    'Darrah.ColorWheel'
 };
 var guiParams = {
-    animation: animationList['CMSK Random Filler']
+    animation: animationList['CMSK Ripples']
 };
 
-//var animation = function () { return 1000; };
-var animation = CMSK.RandomFiller();
+//var animation = function () { return 10; };
+var animation = CMSK.Ripples();
 
 init();
 animate();
@@ -155,6 +157,7 @@ function init() {
     gui.add(guiParams, 'animation', animationList).onChange(function () {
         var f = guiParams['animation'].split('.');
         animation = window[f[0]][f[1]]();
+        cube_clear();
     });
     gui.open();
 
@@ -178,10 +181,19 @@ function animate() {
 }
 
 function render() {
-    if (Date.now() - start >= delay) {
+    var elapsed = Date.now() - start;
+    if (elapsed >= delay) {
+        if (start > 0) {
+            var i = Math.floor(elapsed/delay);
+            if (i < 1) i = 1;
+        } else {
+            var i = 1;
+        }
+
         do {
             delay = animation();
-        } while (delay == 0);
+            i--;
+        } while (delay == 0 || i > 0);
 
         start = Date.now();
     }
