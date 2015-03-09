@@ -17,8 +17,53 @@ var CMSK = function () {
     var AXIS_Y = 'y';
     var AXIS_Z = 'z';
 
-    var color = 0x0000ff;
     var offColor = 0x0;
+
+    var color = 0x0000ff;
+
+    var color_r = 0;
+    var color_g = 0;
+    var color_b = 255;
+
+    var color_dest_r = 0;
+    var color_dest_g = 0;
+    var color_dest_b = 255;
+
+    var color_dr, color_dg, color_db;
+
+    function RGB2Hex(r, g, b) {
+        var hex = b;
+        hex |= (g << 8);
+        hex |= (r << 16);
+        return hex;
+    }
+
+    function color_reset_transition() {
+        color_dest_r = Math.round(color_r);
+        color_dest_g = Math.round(color_g);
+        color_dest_b = Math.round(color_b);
+    }
+
+    function color_change(steps) {
+        if (Math.round(color_r) == color_dest_r &&
+            Math.round(color_g) == color_dest_g &&
+            Math.round(color_b) == color_dest_b
+            ) {
+            color_dest_r = rand()%255;
+            color_dest_g = rand()%255;
+            color_dest_b = rand()%255;
+
+            color_dr = (color_dest_r - color_r) / steps;
+            color_dg = (color_dest_g - color_g) / steps;
+            color_db = (color_dest_b - color_b) / steps;
+        }
+
+        color_r += color_dr;
+        color_g += color_dg;
+        color_b += color_db;
+
+        color = RGB2Hex(Math.round(color_r), Math.round(color_g), Math.round(color_b));
+    }
 
     function fill(pattern) {
         if (!pattern) {
@@ -28,8 +73,11 @@ var CMSK = function () {
         }
     }
 
-    function setvoxel(x, y, z) {
-        cube_set_color(x, y, z, color);
+    function setvoxel(x, y, z, c) {
+        if (typeof c === 'undefined') {
+            c = color;
+        }
+        cube_set_color(x, y, z, c);
     }
 
     function clrvoxel(x, y, z) {
@@ -173,6 +221,8 @@ var CMSK = function () {
         var delay = 30;
         var plane = [AXIS_X, AXIS_Y, AXIS_Z][rand()%3];
 
+        color_reset_transition();
+
         return function () {
             if (i<8) {
                 fill();
@@ -191,6 +241,7 @@ var CMSK = function () {
             i = 0;
             j = CUBE_SIZE-1;
             plane = [AXIS_X, AXIS_Y, AXIS_Z][rand()%3];
+            color_change(1);
 
             return 0;
         }
@@ -198,6 +249,9 @@ var CMSK = function () {
 
     function AnimationBlinky() {
         var i=750;
+
+        color_reset_transition();
+        color_change(1);
 
         var ip = 0;
         var instructions = [
@@ -211,37 +265,38 @@ var CMSK = function () {
                 ip++;
                 return 100;
             },
-                function () {
-                    i = i - (15+(1000/(i/10)));
-                    if (i > 0) {
-                        ip -= 2;
-                        return 0;
-                    } else {
-                        ip++;
-                        i = 750;
-                        return 1000;
-                    }
-                },
-                function () {
-                    fill(0x00);
+            function () {
+                i = i - (15+(1000/(i/10)));
+                if (i > 0) {
+                    ip -= 2;
+                    return 0;
+                } else {
                     ip++;
-                    return 751-i;
-                },
-                    function () {
-                        fill(0xff);
-                        ip++;
-                        return 100;
-                    },
-                    function () {
-                        i = i - (15+(1000/(i/10)));
-                        if (i > 0) {
-                            ip -= 2;
-                            return 0;
-                        } else {
-                            ip++;
-                            return 0;
-                        }
-                    }
+                    i = 750;
+
+                    return 1000;
+                }
+            },
+            function () {
+                fill(0x00);
+                ip++;
+                return 751-i;
+            },
+            function () {
+                fill(0xff);
+                ip++;
+                return 100;
+            },
+            function () {
+                i = i - (15+(1000/(i/10)));
+                if (i > 0) {
+                    ip -= 2;
+                    return 0;
+                } else {
+                    ip++;
+                    return 0;
+                }
+            }
         ];
 
         return function () {
@@ -407,6 +462,8 @@ var CMSK = function () {
         var i = 0;
         var f = AnimationBoxShrinkGrow(i%4, i & 0x04);
 
+        color_reset_transition();
+
         return function () {
             var ret = f();
 
@@ -414,6 +471,7 @@ var CMSK = function () {
                 i++;
                 if (i < 8) {
                     f = AnimationBoxShrinkGrow(i%4, i & 0x04);
+                    color_change(4);
                 } else {
                     i = 0;
                 }
@@ -428,6 +486,8 @@ var CMSK = function () {
     function AnimationBoxWoopWoop() {
         var i = 0, ii;
         var grow = 0;
+
+        color_reset_transition();
 
         return function () {
             if (i < 4) {
@@ -444,6 +504,7 @@ var CMSK = function () {
             } else {
                 i = 0;
                 grow = grow ? 0 : 1;
+                color_change(20);
                 return 0;
             }
         }
@@ -460,7 +521,7 @@ var CMSK = function () {
         var crash_x, crash_y, crash_z;
         var snake = [];
 
-        var delay = 600;
+        var delay = 100;
         var mode = 0x01;
         var drawmode = 0x03;
 
@@ -476,6 +537,8 @@ var CMSK = function () {
         dx = 1;
         dy = 1;
         dz = 1;
+
+        color_reset_transition();
 
         var ip = 0;
         var instructions = [
@@ -723,47 +786,48 @@ var CMSK = function () {
 
                 return 0;
             },
-                function () { // show one voxel at time
-                    setvoxel(x,y,z);
-                    ip++;
-                    return delay;
-                },
-                function () {
-                    clrvoxel(x,y,z);
-                    ip = 0;
-                    return 0;
-                },
-                    function () { // flip the voxel in question
-                        flpvoxel(x,y,z);
-                        ip = 0;
-                        return delay;
-                    },
-                    function () { // draw a snake
-                        for (var i=7;i>0;i--) {
-                            snake[i][0] = snake[i-1][0];
-                            snake[i][1] = snake[i-1][1];
-                            snake[i][2] = snake[i-1][2];
-                        }
+            function () { // show one voxel at time
+                setvoxel(x,y,z);
+                ip++;
+                return delay;
+            },
+            function () {
+                clrvoxel(x,y,z);
+                ip = 0;
+                return 0;
+            },
+            function () { // flip the voxel in question
+                flpvoxel(x,y,z);
+                ip = 0;
+                return delay;
+            },
+            function () { // draw a snake
+                for (var i=7;i>0;i--) {
+                    snake[i][0] = snake[i-1][0];
+                    snake[i][1] = snake[i-1][1];
+                    snake[i][2] = snake[i-1][2];
+                }
 
-                        snake[0][0] = x;
-                        snake[0][1] = y;
-                        snake[0][2] = z;
+                snake[0][0] = x;
+                snake[0][1] = y;
+                snake[0][2] = z;
 
-                        for (i=0;i<8;i++) {
-                            setvoxel(snake[i][0],snake[i][1],snake[i][2]);
-                        }
+                for (i=0;i<8;i++) {
+                    setvoxel(snake[i][0],snake[i][1],snake[i][2]);
+                }
 
-                        ip++;
-                        return delay;
-                    },
-                        function () {
-                            for (i=0;i<8;i++) {
-                                clrvoxel(snake[i][0],snake[i][1],snake[i][2]);
-                            }
+                ip++;
+                return delay;
+            },
+            function () {
+                for (i=0;i<8;i++) {
+                    clrvoxel(snake[i][0],snake[i][1],snake[i][2]);
+                }
 
-                            ip = 0;
-                            return 0;
-                        }
+                ip = 0;
+                color_change(200);
+                return 0;
+            }
         ];
 
         return function () {
@@ -783,11 +847,15 @@ var CMSK = function () {
         var delay = 5;
         var state = 1;
 
+        color_reset_transition();
+
         var ip = 0;
         var instructions = [
             function () {
                 if (state == 1) {
                     fill(0x00);
+
+                    color_change(1);
                 } else {
                     fill(0xff);
                 }
@@ -846,6 +914,8 @@ var CMSK = function () {
                 setvoxel(rnd_x,7,rnd_y);
             }
 
+            color_change(50);
+
             return 100;
         }
     }
@@ -865,6 +935,8 @@ var CMSK = function () {
 
         // Particles and their position, x,y,z and their movement, dx, dy, dz
         var particles;
+
+        color_reset_transition();
 
         var ip = 0;
         var instructions = [
@@ -896,7 +968,7 @@ var CMSK = function () {
 
                     setvoxel(origin_x, e, origin_z);
 
-                    return (10+50*e++);
+                    return (10+30*e++);
                 } else {
                     fill(0x00);
                     e = 0;
@@ -952,6 +1024,7 @@ var CMSK = function () {
                     fill(0x00);
                     e = 0;
                     ip = 0;
+                    color_change(1);
                     return 1000;
                 }
             }
@@ -966,8 +1039,8 @@ var CMSK = function () {
         };
     }
 
-    function distance2d(x1, y1, x2, y2) {
-        return Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+    function distance(x1, y1, z1, x2, y2, z2) {
+        return Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2));
     }
 
     function AnimationRipples() {
@@ -978,22 +1051,23 @@ var CMSK = function () {
         return function () {
             fill(0x00);
 
-            for (var x=0; x<8; x++) {
-                for (var z=0; z<8; z++) {
-                    var distance = distance2d(3.5,3.5,x,z)/9.899495*8;
-                    var height = 4+Math.sin(distance/ripple_interval + i/50)*4;
+            for (var z=0; z<8; z++) {
+                for (var x=0; x<8; x++) {
+                    var d = distance(3.5, 3.5, 0, x, z, 0)/9.899495*8;
+                    var height = Math.floor(4+Math.sin(d/ripple_interval + i/50)*4);
 
-                    setvoxel(x, Math.floor(height), z);
+                    setvoxel(x, height, z, color-10*height);
                 }
             }
 
+            color_change(1000);
             i++;
             return delay;
         };
     }
 
     function AnimationSidewaves() {
-        var origin_x, origin_y, distance, height, ripple_interval = 2;
+        var origin_x, origin_y, d, height, ripple_interval = 2;
         var i = 0;
         var delay = 5;
 
@@ -1005,14 +1079,199 @@ var CMSK = function () {
 
             for (x=0;x<8;x++) {
                 for (y=0;y<8;y++) {
-                    distance = distance2d(origin_x,origin_y,x,y)/9.899495*8;
-                    height = Math.floor(4+Math.sin(distance/ripple_interval + i/50)*3.6);
+                    d = distance(origin_x, origin_y, 0, x, y, 0)/9.899495*8;
+                    height = Math.floor(4+Math.sin(d/ripple_interval + i/50)*3.6);
 
                     setvoxel(x, height, y);
                 }
             }
 
             i++;
+            return delay;
+        };
+    }
+
+    function AnimationSphereMove() {
+        var origin_x, origin_y, origin_z, d, diameter;
+        var x, y, z, i = 0;
+        var delay = 5;
+
+        color_reset_transition();
+
+        return function () {
+            fill(0x00);
+
+            origin_x = 3.5+Math.sin(i/50)*2.5;
+            origin_y = 3.5+Math.cos(i/50)*2.5;
+            origin_z = 3.5+Math.cos(i/30)*2;
+
+            diameter = 2+Math.sin(i/150);
+
+            for (x=0; x<8; x++) {
+                for (y=0; y<8; y++) {
+                    for (z=0; z<8; z++) {
+                        d = distance(x, y, z, origin_x, origin_y, origin_z);
+
+                        if (d>diameter && d<diameter+1) {
+                            setvoxel(x,y,z);
+                        }
+                    }
+                }
+            }
+
+            i++;
+            color_change(1000);
+            return delay;
+        }
+    }
+
+    function line_3d(x1, y1, z1, x2, y2, z2) {
+        var i;
+        var err_1, err_2;
+
+        var pixel = [x1, y1, z1];
+
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        var dz = z2 - z1;
+
+        var x_inc = (dx < 0) ? -1 : 1;
+        var l = Math.abs(dx);
+
+        var y_inc = (dy < 0) ? -1 : 1;
+        var m = Math.abs(dy);
+
+        var z_inc = (dz < 0) ? -1 : 1;
+        var n = Math.abs(dz);
+
+        var dx2 = l << 1;
+        var dy2 = m << 1;
+        var dz2 = n << 1;
+
+        if ((l >= m) && (l >= n)) {
+            err_1 = dy2 - l;
+            err_2 = dz2 - l;
+
+            for (i = 0; i < l; i++) {
+                setvoxel(pixel[0],pixel[1],pixel[2]);
+
+                if (err_1 > 0) {
+                    pixel[1] += y_inc;
+                    err_1 -= dx2;
+                }
+
+                if (err_2 > 0) {
+                    pixel[2] += z_inc;
+                    err_2 -= dx2;
+                }
+
+                err_1 += dy2;
+                err_2 += dz2;
+                pixel[0] += x_inc;
+            }
+        } else if ((m >= l) && (m >= n)) {
+            err_1 = dx2 - m;
+            err_2 = dz2 - m;
+
+            for (i = 0; i < m; i++) {
+                setvoxel(pixel[0],pixel[1],pixel[2]);
+
+                if (err_1 > 0) {
+                    pixel[0] += x_inc;
+                    err_1 -= dy2;
+                }
+
+                if (err_2 > 0) {
+                    pixel[2] += z_inc;
+                    err_2 -= dy2;
+                }
+
+                err_1 += dx2;
+                err_2 += dz2;
+                pixel[1] += y_inc;
+            }
+        } else {
+            err_1 = dy2 - n;
+            err_2 = dx2 - n;
+
+            for (i = 0; i < n; i++) {
+                setvoxel(pixel[0],pixel[1],pixel[2]);
+
+                if (err_1 > 0) {
+                    pixel[1] += y_inc;
+                    err_1 -= dz2;
+                }
+
+                if (err_2 > 0) {
+                    pixel[0] += x_inc;
+                    err_2 -= dz2;
+                }
+
+                err_1 += dy2;
+                err_2 += dx2;
+                pixel[2] += z_inc;
+            }
+        }
+
+        setvoxel(pixel[0],pixel[1],pixel[2]);
+    }
+
+    function AnimationLineSpin() {
+        var top_x, top_y, top_z, bot_x, bot_y, bot_z, sin_base;
+        var center_x = 4, center_y = 4;
+        var i = 0, z;
+
+        color_reset_transition();
+
+        return function () {
+            fill(0x00);
+
+            for (z = 0; z < 8; z++) {
+                sin_base = i/50 + z/(10+(7*Math.sin(i/200)));
+
+                top_x = Math.floor(center_x + Math.sin(sin_base)*5);
+                top_y = Math.floor(center_x + Math.cos(sin_base)*5);
+
+                bot_x = Math.floor(center_x + Math.sin(sin_base+3.14)*10);
+                bot_y = Math.floor(center_x + Math.cos(sin_base+3.14)*10);
+
+                bot_z = z;
+                top_z = z;
+
+                line_3d(top_z, top_x, top_y, bot_z, bot_x, bot_y);
+            }
+
+            i++;
+            color_change(1000);
+            return 5;
+        };
+    }
+
+    function AnimationSineLines() {
+        var i = 0, x;
+        var left, right, sine_base, x_dividor,ripple_height;
+        var delay = 5;
+
+        color_reset_transition();
+
+        return function () {
+            fill(0x00);
+
+            for (x=0; x<8 ;x++) {
+                x_dividor = 2 + Math.sin(i/100)+1;
+                ripple_height = 3 + (Math.sin(i/200)+1)*6;
+
+                sine_base = i/40 + x/x_dividor;
+
+                left = Math.floor(4 + Math.sin(sine_base)*ripple_height);
+                right = 4 + Math.cos(sine_base)*ripple_height;
+                right = Math.floor(7-left);
+
+                line_3d(0-3, x, left, 7+3, x, right);
+            }
+
+            i++;
+            color_change(1000);
             return delay;
         };
     }
@@ -1028,5 +1287,8 @@ var CMSK = function () {
         , 'Fireworks':     AnimationFireworks
         , 'Ripples':       AnimationRipples
         , 'Sidewaves':     AnimationSidewaves
+        , 'SphereMove':    AnimationSphereMove
+        , 'LineSpin':      AnimationLineSpin
+        , 'SineLines':     AnimationSineLines
     }
 }();
