@@ -54,6 +54,7 @@ if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 var container, scene, camera, renderer, controls, stats;
 var RES = 8;
+var distanceLED = 40;
 var materialGlow, materialPoint, materialOff;
 
 var start = 0, delay = 0;
@@ -84,7 +85,7 @@ var guiParams = {
     animation: animationList['CMSK Ripples']
 };
 
-//var animation = function () { return 10; };
+//var animation = function () { return 100; };
 var animation = CMSK.Ripples();
 
 init();
@@ -120,17 +121,20 @@ function init() {
     stats.domElement.style.top = '0px';
     container.appendChild( stats.domElement );
 
-    var d = 40;
+    var d = distanceLED;
     var offset_x = -d*(RES-1)/2, offset_y = -d*(RES-1)/2+30, offset_z = -150;
     var s = 40;
     var s2 = 15;
 
     // floor
-    var floorMaterial = new THREE.MeshBasicMaterial({color: 0, side: THREE.DoubleSide });
-    var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+    var floorMaterial = new THREE.MeshPhongMaterial({
+        color: 0,
+        shininess: 2
+    });
+    var floorGeometry = new THREE.PlaneGeometry(2000, 2000, 10, 10);
     var floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.position.y = offset_y - 30;
-    floor.rotation.x = Math.PI / 2;
+    floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
 
     var textureGlow  = THREE.ImageUtils.loadTexture('images/textures/led1.png');
@@ -155,6 +159,15 @@ function init() {
                 sprite.scale.set(s, s, s);
                 scene.add(sprite);
             }
+        }
+    }
+
+    for (var z = 0; z < RES; z++) {
+        for (var x = 0; x < RES; x++) {
+            var light = new THREE.PointLight(0x0000ff, 0.0, 700);
+            light.position.set(offset_x + d*x, offset_y, offset_z + d*z);
+
+            scene.add(light);
         }
     }
 
@@ -219,18 +232,24 @@ function cube_get_color(x, y, z) {
     return scene.children[i+1].material.color.getHex();
 }
 
+function get_scene_offset(x, y, z) {
+    return 2 + (x + y*RES + z*RES*RES)*2;
+}
+
 function cube_set_color(x, y, z, color) {
     if (!cube_check_coords(x, y, z)) {
         return;
     }
 
-    var i = 2 + (x + y*RES + z*RES*RES)*2;
+    var i = get_scene_offset(x, y, z);
 
     if (color == 0x0) {
+        // turn off the LED
         scene.children[i].material = materialOff;
         scene.children[i+1].material.opacity = 0;
         scene.children[i+1].material.color.setHex(color);
     } else {
+        // turn on the LED
         scene.children[i].material = materialPoint.clone();
         scene.children[i].material.color.setHex(color);
         var hsl = scene.children[i].material.color.getHSL();
@@ -238,6 +257,30 @@ function cube_set_color(x, y, z, color) {
 
         scene.children[i+1].material.opacity = 1;
         scene.children[i+1].material.color.setHex(color);
+    }
+
+    // update the light
+    var light = scene.children[2 + RES*RES*RES*2 + x + z*RES];
+    var lightOff = true;
+
+    for (var yy = 0; yy < RES; yy++) {
+        var ledGlow = scene.children[get_scene_offset(x, yy, z)+1];
+        if (ledGlow.material.opacity == 1) {
+            if (lightOff) {
+                light.intensity = 1.0;
+                light.color.setHex(ledGlow.material.color.getHex());
+                light.position.y = yy*distanceLED;
+
+                lightOff = false;
+            } else {
+                var mixinColor = ledGlow.material.color.clone();
+                light.color.lerp(mixinColor, 1/yy);
+            }
+        }
+    }
+
+    if (lightOff) {
+        light.intensity = 0;
     }
 }
 
