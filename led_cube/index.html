@@ -83,6 +83,7 @@ var animationList = {
 };
 var guiParams = {
     animation: animationList['CMSK Ripples']
+    , spin: true
 };
 
 //var animation = function () { return 100; };
@@ -114,6 +115,7 @@ function init() {
     // controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.maxPolarAngle = Math.PI/2;
+    controls.autoRotate = true;
 
     // stats
     stats = new Stats();
@@ -176,6 +178,9 @@ function init() {
         var f = guiParams['animation'].split('.');
         animation = window[f[0]][f[1]]();
         cube_clear();
+    });
+    gui.add(guiParams, 'spin').onChange(function () {
+        controls.autoRotate = !controls.autoRotate;
     });
     gui.open();
 
